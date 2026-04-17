@@ -1,5 +1,6 @@
 using NLog;
 using NzbDrone.Common.Instrumentation.Extensions;
+using NzbDrone.Core.Download;
 using NzbDrone.Core.Messaging.Commands;
 using NzbDrone.Core.Tv;
 
@@ -9,14 +10,20 @@ namespace NzbDrone.Core.IndexerSearch
     {
         private readonly ISeriesService _seriesService;
         private readonly EpisodeSearchService _episodeSearchService;
+        private readonly ISearchForReleases _releaseSearchService;
+        private readonly IProcessDownloadDecisions _processDownloadDecisions;
         private readonly Logger _logger;
 
         public SeasonEpisodeSearchService(ISeriesService seriesService,
                                           EpisodeSearchService episodeSearchService,
+                                          ISearchForReleases releaseSearchService,
+                                          IProcessDownloadDecisions processDownloadDecisions,
                                           Logger logger)
         {
             _seriesService = seriesService;
             _episodeSearchService = episodeSearchService;
+            _releaseSearchService = releaseSearchService;
+            _processDownloadDecisions = processDownloadDecisions;
             _logger = logger;
         }
 
@@ -43,7 +50,10 @@ namespace NzbDrone.Core.IndexerSearch
                 return;
             }
 
-            _episodeSearchService.SearchForBulkEpisodes(eligibleEpisodes, true, message.Trigger == CommandTrigger.Manual).GetAwaiter().GetResult();
+            var decisions = _releaseSearchService.SeasonSearch(message.SeriesId, message.SeasonNumber, eligibleEpisodes, true, message.Trigger == CommandTrigger.Manual, false).GetAwaiter().GetResult();
+            var processed = _processDownloadDecisions.ProcessDecisions(decisions).GetAwaiter().GetResult();
+
+            _logger.ProgressInfo("Season search completed. {0} reports downloaded.", processed.Grabbed.Count);
         }
     }
 }

@@ -77,6 +77,49 @@ namespace NzbDrone.Core.Test.IndexerSearchTests
                   .Returns(Task.FromResult(new ProcessedDecisions(new List<DownloadDecision>(), new List<DownloadDecision>(), new List<DownloadDecision>())));
         }
 
+        [TestCase(SeriesTypes.Standard)]
+        [TestCase(SeriesTypes.Anime)]
+        [TestCase(SeriesTypes.Daily)]
+        public void should_use_filtered_season_search_path_for_single_eligible_episode_for_all_series_types(SeriesTypes seriesType)
+        {
+            Mocker.GetMock<ISeriesService>()
+                  .Setup(s => s.GetSeries(SeriesId))
+                  .Returns(new Series
+                  {
+                      Id = SeriesId,
+                      Title = "Series",
+                      Monitored = true,
+                      SeriesType = seriesType
+                  });
+
+            var eligibleEpisode = CreateEpisode(1, monitored: true, hasFile: false, aired: true);
+            var queuedEpisode = CreateEpisode(2, monitored: true, hasFile: false, aired: true);
+
+            _episodes.AddRange(new[]
+            {
+                eligibleEpisode,
+                queuedEpisode
+            });
+
+            _queue.Add(new QueueModel
+            {
+                Episodes = new List<Episode> { queuedEpisode }
+            });
+
+            Subject.Execute(new SeasonEpisodeSearchCommand
+            {
+                SeriesId = SeriesId,
+                SeasonNumber = SeasonNumber,
+                Trigger = CommandTrigger.Manual
+            });
+
+            Mocker.GetMock<ISearchForReleases>()
+                  .Verify(v => v.SeasonSearch(SeriesId, SeasonNumber, It.Is<List<Episode>>(episodes => episodes.Select(e => e.Id).SequenceEqual(new[] { eligibleEpisode.Id })), true, true, false), Times.Once());
+
+            Mocker.GetMock<ISearchForReleases>()
+                  .Verify(v => v.EpisodeSearch(It.IsAny<Episode>(), It.IsAny<bool>(), It.IsAny<bool>()), Times.Never());
+        }
+
         [Test]
         public void should_search_only_monitored_episodes_and_skip_episodes_with_files_unaired_episodes_and_queued_episodes()
         {
