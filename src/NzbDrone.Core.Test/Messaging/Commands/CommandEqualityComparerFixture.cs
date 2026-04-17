@@ -88,6 +88,35 @@ namespace NzbDrone.Core.Test.Messaging.Commands
         }
 
         [Test]
+        public void should_return_true_when_both_episode_search_properties_are_null()
+        {
+            var command1 = new EpisodeSearchCommand(null);
+            var command2 = new EpisodeSearchCommand(null);
+
+            CommandEqualityComparer.Instance.Equals(command1, command2).Should().BeTrue();
+        }
+
+        [TestCase(1, 1)]
+        [TestCase(2, 3)]
+        public void should_return_true_when_season_episode_search_properties_match(int seriesId, int seasonNumber)
+        {
+            var command1 = CreateSeasonEpisodeSearchCommand(seriesId, seasonNumber);
+            var command2 = CreateSeasonEpisodeSearchCommand(seriesId, seasonNumber);
+
+            CommandEqualityComparer.Instance.Equals(command1, command2).Should().BeTrue();
+        }
+
+        [TestCase(1, 1, 2, 2)]
+        [TestCase(1, 1, 1, 2)]
+        public void should_return_false_when_season_episode_search_properties_dont_match(int leftSeriesId, int leftSeasonNumber, int rightSeriesId, int rightSeasonNumber)
+        {
+            var command1 = CreateSeasonEpisodeSearchCommand(leftSeriesId, leftSeasonNumber);
+            var command2 = CreateSeasonEpisodeSearchCommand(rightSeriesId, rightSeasonNumber);
+
+            CommandEqualityComparer.Instance.Equals(command1, command2).Should().BeFalse();
+        }
+
+        [Test]
         public void should_return_false_when_only_one_has_null_property()
         {
             var command1 = new EpisodeSearchCommand(null);
@@ -118,6 +147,15 @@ namespace NzbDrone.Core.Test.Messaging.Commands
             var command2 = new EpisodeSearchCommand { EpisodeIds = new List<int> { 2 } };
 
             CommandEqualityComparer.Instance.Equals(command1, command2).Should().BeFalse();
+        }
+
+        private static SeasonEpisodeSearchCommand CreateSeasonEpisodeSearchCommand(int seriesId, int seasonNumber)
+        {
+            return new SeasonEpisodeSearchCommand
+            {
+                SeriesId = seriesId,
+                SeasonNumber = seasonNumber
+            };
         }
 
         [Test]
