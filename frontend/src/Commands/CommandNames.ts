@@ -19,6 +19,7 @@ enum CommandNames {
   ResetApiKey = 'ResetApiKey',
   ResetQualityDefinitions = 'ResetQualityDefinitions',
   RssSync = 'RssSync',
+  SeasonEpisodeSearch = 'SeasonEpisodeSearch',
   SeasonSearch = 'SeasonSearch',
   SeriesSearch = 'SeriesSearch',
 }

@@ -40,7 +40,7 @@ namespace NzbDrone.Core.IndexerSearch
             _logger = logger;
         }
 
-        private async Task SearchForBulkEpisodes(List<Episode> episodes, bool monitoredOnly, bool userInvokedSearch)
+        public async Task SearchForBulkEpisodes(List<Episode> episodes, bool monitoredOnly, bool userInvokedSearch)
         {
             _logger.ProgressInfo("Performing search for {0} episodes", episodes.Count);
             var downloadedCount = 0;
@@ -100,6 +100,20 @@ namespace NzbDrone.Core.IndexerSearch
             }
 
             _logger.ProgressInfo("Completed search for {0} episodes. {1} reports downloaded.", episodes.Count, downloadedCount);
+        }
+
+        public List<Episode> GetSeasonSearchEpisodes(int seriesId, int seasonNumber)
+        {
+            var episodes = _episodeService.GetEpisodesBySeason(seriesId, seasonNumber)
+                                          .Where(e => IsMonitored(e.Monitored, e.Series?.Monitored ?? true) &&
+                                                      !e.HasFile &&
+                                                      e.AirDateUtc.HasValue &&
+                                                      e.AirDateUtc.Value.Before(DateTime.UtcNow))
+                                          .ToList();
+
+            var queue = GetQueuedEpisodeIds();
+
+            return episodes.Where(e => !queue.Contains(e.Id)).ToList();
         }
 
         private bool IsMonitored(bool episodeMonitored, bool seriesMonitored)

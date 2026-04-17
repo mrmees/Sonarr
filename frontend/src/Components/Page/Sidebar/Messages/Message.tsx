@@ -32,6 +32,7 @@ function Message({ id, hideAfter, name, message, type }: MessageProps) {
         return icons.REFRESH;
       case 'RssSync':
         return icons.RSS;
+      case 'SeasonEpisodeSearch':
       case 'SeasonSearch':
         return icons.SEARCH;
       case 'SeriesSearch':

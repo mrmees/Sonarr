@@ -12,6 +12,7 @@ using NzbDrone.Core.Messaging.Commands;
 using NzbDrone.Core.Queue;
 using NzbDrone.Core.Test.Framework;
 using NzbDrone.Core.Tv;
+using QueueModel = NzbDrone.Core.Queue.Queue;
 
 namespace NzbDrone.Core.Test.IndexerSearchTests
 {
@@ -25,11 +26,15 @@ namespace NzbDrone.Core.Test.IndexerSearchTests
 
         private readonly List<Episode> _episodes = new();
         private readonly List<Episode> _searchedEpisodes = new();
-        private readonly List<Queue> _queue = new();
+        private readonly List<QueueModel> _queue = new();
 
         [SetUp]
         public void SetUp()
         {
+            _episodes.Clear();
+            _searchedEpisodes.Clear();
+            _queue.Clear();
+
             var series = new Series
             {
                 Id = SeriesId,
@@ -58,6 +63,15 @@ namespace NzbDrone.Core.Test.IndexerSearchTests
                       _searchedEpisodes.AddRange(episodes);
                   });
 
+            Mocker.GetMock<ISearchForReleases>()
+                  .Setup(s => s.EpisodeSearch(It.IsAny<Episode>(), It.IsAny<bool>(), It.IsAny<bool>()))
+                  .Returns(Task.FromResult(new List<DownloadDecision>()))
+                  .Callback<Episode, bool, bool>((episode, _, _) =>
+                  {
+                      _searchedEpisodes.Clear();
+                      _searchedEpisodes.Add(episode);
+                  });
+
             Mocker.GetMock<IProcessDownloadDecisions>()
                   .Setup(s => s.ProcessDecisions(It.IsAny<List<DownloadDecision>>()))
                   .Returns(Task.FromResult(new ProcessedDecisions(new List<DownloadDecision>(), new List<DownloadDecision>(), new List<DownloadDecision>())));
@@ -81,7 +95,7 @@ namespace NzbDrone.Core.Test.IndexerSearchTests
                 queuedEpisode
             });
 
-            _queue.Add(new Queue
+            _queue.Add(new QueueModel
             {
                 Episodes = new List<Episode> { queuedEpisode }
             });
